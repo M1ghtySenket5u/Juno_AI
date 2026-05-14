@@ -8,7 +8,7 @@ Example:
 
 ```bash
 mkdir -p ~/juno-ai
-# copy all project files into ~/juno-ai (main.py, requirements.txt, etc.)
+# copy all project files into ~/juno-ai (main.py, requirements.txt, juno_offline.py, etc.)
 cd ~/juno-ai
 ```
 
@@ -33,11 +33,9 @@ This creates `.venv`, installs dependencies, and adds **Juno AI** to your applic
 - Open the **menu**, search **Juno AI**, click it, **or**
 - Run `~/juno-ai/juno-ai.sh` from a terminal.
 
-## 5. Configure the AI
+## 5. Optional: Settings
 
-1. **File → Settings…**
-2. Pick **OpenAI** (needs API key) or **Ollama (local)**.
-3. Save.
+**File → Settings…** is only needed if you want **OpenAI** or a **local OpenAI-compatible HTTP API**. Out of the box, Juno runs in **offline** mode with built-in Linux, Mint, terminal, command, and apple pie content.
 
 ## Optional: `.deb` package
 

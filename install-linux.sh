@@ -33,7 +33,7 @@ echo ""
 echo "Installation finished."
 echo "  • Start from the menu: look for \"Juno AI\""
 echo "  • Or run: $DIR/juno-ai.sh"
-echo "  • First launch: File → Settings (OpenAI key or local Ollama)."
+echo "  • First launch: works fully offline. File → Settings only if you add OpenAI or a local HTTP API."
 echo ""
 echo "Updating desktop database (optional)…"
 if command -v update-desktop-database >/dev/null 2>&1; then

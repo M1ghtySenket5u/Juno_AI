@@ -1,22 +1,28 @@
 # Juno AI
 
-Juno AI is a **Linux Mint–friendly desktop chat companion**. She helps newcomers learn Mint, answers questions across many topics, and speaks with a calm, mission-focused tone (inspired loosely by popular game characters — original wording only).
+Juno AI is a **Linux Mint–friendly desktop chat companion**. She speaks with a calm, mission-focused tone (inspired loosely by popular game characters — original wording only) and ships with a **full offline curriculum**: Linux concepts, Linux Mint workflows, common terminal commands, how to work confidently in a shell, and a complete **apple pie** recipe — no account or network required for that core experience.
 
-**Everything for the app lives in one folder** (the `juno-ai` directory): Python sources, launcher scripts, desktop template, install helper, `.deb` builder, and docs — no extra subpackages to hunt for.
+**Everything for the app lives in one folder** (the `juno-ai` directory): Python sources, launcher scripts, desktop template, install helper, `.deb` builder, and docs.
 
-- **Cloud:** OpenAI Chat Completions API (models such as `gpt-4o-mini`), with **streaming** replies.
-- **Local / offline (LAN):** [Ollama](https://ollama.com/) via the OpenAI-compatible endpoint — no OpenAI account required if your PC runs the model.
+## How Juno responds
 
-The interface uses a **galaxy background** with **NASA-clean typography** and **Japanese palette accents** (indigo, vermilion, gold).
+| Mode | What happens |
+|------|----------------|
+| **Offline (default)** | Built-in answers from `juno_offline.py` — facts, Mint notes, command glossaries, terminal drills, apple pie checklist. |
+| **OpenAI (optional)** | If you add your own API key in Settings, replies stream from OpenAI Chat Completions (for example `gpt-4o-mini`). |
+| **Local HTTP API (advanced)** | If you point Settings at any **OpenAI-compatible** `/v1` Chat Completions server on your machine or LAN, Juno can stream from there. Some operators use local stacks that expose that shape of API; configure base URL and model id to match your environment. |
+
+If a live model call fails, Juno **falls back** to the same offline library so the window stays useful.
+
+The interface uses a **galaxy background** with clean typography and **Japanese palette accents** (indigo, vermilion, gold).
 
 ---
 
 ## What you need
 
-| Mode | Requirements |
-|------|----------------|
-| **OpenAI** | [API key](https://platform.openai.com/api-keys) and network access |
-| **Ollama** | Ollama installed and a model pulled (e.g. `ollama pull llama3.2`) |
+- **Offline only:** Python 3 + PyQt6 (installed by the helper script below). No API keys.
+- **OpenAI:** your own [API key](https://platform.openai.com/api-keys) and network when chatting.
+- **Local HTTP API:** whatever server you run; Juno only needs a reachable base URL and model name.
 
 ---
 
@@ -63,15 +69,15 @@ This will:
 ~/juno-ai/juno-ai.sh
 ```
 
-### 5. Configure the AI backend
+### 5. Optional: connect a live model
 
 1. In Juno: **File → Settings…**
-2. Choose **OpenAI** or **Ollama (local)**.
-3. **OpenAI:** paste your API key and pick a model name (default `gpt-4o-mini`).
-4. **Ollama:** set base URL (default `http://127.0.0.1:11434`) and the model name you pulled.
-5. Click **Save**.
+2. Leave **Offline** selected to stay on built-in lessons, **or** choose **OpenAI** and paste a key, **or** choose **Local HTTP API** and set base URL + model id to match your stack.
+3. Click **Save**.
 
-You are done. Ask Juno anything; she opens with a **random Linux Mint fun fact** and, when you exit, shows a **mission-style farewell plaque** for **5 seconds** (with a live countdown) before the app closes — lines like **“See you later, partner”** and **“Race you to the moon”** are in the rotation along with a few similar sign-offs.
+On first launch, **Offline** is already selected — you can learn Mint and Linux immediately.
+
+When you exit, Juno shows a **mission-style farewell plaque** for **5 seconds** (with a live countdown) before the app closes — lines like **“See you later, partner”** and **“Race you to the moon”** are in the rotation along with a few similar sign-offs.
 
 ---
 
@@ -105,33 +111,34 @@ The package installs to `/opt/juno-ai` and runs `postinst` to create the venv an
 | File | Purpose |
 |------|---------|
 | `main.py` | Application UI and logic |
+| `juno_offline.py` | Offline facts, Mint notes, commands, terminal primer, apple pie |
 | `galaxy_widget.py` | Painted galaxy / starfield background |
-| `mint_fun_facts.py` | Mint trivia for startup |
-| `juno_system_prompt.py` | Persona and safety rules for the model |
-| `config_store.py` | Saves `~/.config/juno-ai/config.json` |
+| `mint_fun_facts.py` | Mint trivia for startup rotation |
+| `juno_system_prompt.py` | Persona and safety rules for live models |
+| `config_store.py` | Saves `~/.config/juno-ai/config.json` (defaults to offline) |
 | `requirements.txt` | Python dependencies |
 | `juno-ai.sh` | Launcher (uses `.venv` when present) |
 | `juno-ai.desktop.template` | Template for the menu entry |
 | `install-linux.sh` | One-shot local install + menu shortcut |
 | `build-deb.sh` | Builds a simple `.deb` |
-| `INSTALL.md` | Short numbered install steps (same flow as above, easy to print) |
+| `INSTALL.md` | Short numbered install steps |
 
 ---
 
 ## Medical and safety note
 
-Juno can discuss **general** medical or biology topics for education, but she is **not** a clinician. For personal diagnosis, treatment, or emergencies, contact a qualified professional or local emergency services.
+Juno can discuss **general** medical or biology topics for education when a live model is enabled, but she is **not** a clinician. For personal diagnosis, treatment, or emergencies, contact a qualified professional or local emergency services.
 
 ---
 
 ## Troubleshooting
 
-- **“Set your OpenAI API key”** — Open **File → Settings** and save a valid key, or switch to Ollama.
-- **Ollama errors** — Run `ollama serve`, confirm `curl http://127.0.0.1:11434` responds, and that you ran `ollama pull <model>` for the model name in Settings.
+- **OpenAI errors** — Confirm your key in Settings; on failure Juno falls back to offline answers automatically.
+- **Local HTTP API errors** — Confirm the base URL responds on your machine, the model id exists on that server, and firewalls allow localhost/LAN access as needed. Failed calls also fall back offline.
 - **PyQt6 import errors** — Re-run `./install-linux.sh` or manually: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
 
 ---
 
 ## License
 
-Use and modify for personal use. OpenAI and Ollama have their own terms; Juno AI does not ship any model weights.
+Use and modify for personal use. Third-party APIs and servers have their own terms; Juno AI does not ship any model weights.

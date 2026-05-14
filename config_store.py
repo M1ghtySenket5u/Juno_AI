@@ -1,6 +1,15 @@
 import json
 from pathlib import Path
 
+# Defaults: offline-first so Juno works with zero keys or local services.
+DEFAULT_CONFIG: dict = {
+    "provider": "offline",
+    "api_key": "",
+    "model": "gpt-4o-mini",
+    "ollama_base": "http://127.0.0.1:11434",
+    "ollama_model": "llama3.2",
+}
+
 
 def config_dir() -> Path:
     base = Path.home() / ".config" / "juno-ai"
@@ -14,12 +23,16 @@ def config_path() -> Path:
 
 def load_config() -> dict:
     path = config_path()
+    merged = DEFAULT_CONFIG.copy()
     if not path.is_file():
-        return {}
+        return merged
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        disk = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(disk, dict):
+            merged.update(disk)
     except (json.JSONDecodeError, OSError):
-        return {}
+        pass
+    return merged
 
 
 def save_config(data: dict) -> None:

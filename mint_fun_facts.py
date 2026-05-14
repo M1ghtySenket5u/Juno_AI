@@ -23,6 +23,8 @@ MINT_FUN_FACTS: tuple[str, ...] = (
     "Synaptic still exists for power users who want a raw view of every package and dependency.",
     "Mint's forums and monthly blog posts are first-class places to read release notes and upcoming changes.",
     "You can theme GTK, icons, and cursors separately — so 'galaxy samurai NASA' at home is absolutely allowed.",
+    "The Warpinator tool on Mint can send files across a LAN to other Mint machines with minimal setup.",
+    "Mint's release-upgrade path is designed to be cautious: read the release notes before jumping major versions.",
 )
 
 

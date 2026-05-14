@@ -15,8 +15,8 @@ Priority: optional
 Architecture: all
 Maintainer: Juno AI User <local@localhost>
 Depends: python3 (>= 3.10), python3-venv, python3-pip
-Description: Juno AI — Linux Mint desktop buddy (OpenAI / Ollama)
- Desktop chat assistant themed for Linux Mint learners. Uses a local venv under /opt/juno-ai.
+Description: Juno AI — Linux Mint desktop buddy (offline-first)
+ Desktop chat assistant themed for Linux Mint learners; optional OpenAI or local HTTP API. Uses a local venv under /opt/juno-ai.
 EOF
 
 cat >"$PKG/DEBIAN/postinst" <<'EOS'
@@ -32,7 +32,7 @@ EOS
 chmod 755 "$PKG/DEBIAN/postinst"
 
 cp -a "$ROOT/main.py" "$ROOT/config_store.py" "$ROOT/juno_system_prompt.py" \
-  "$ROOT/mint_fun_facts.py" "$ROOT/galaxy_widget.py" \
+  "$ROOT/juno_offline.py" "$ROOT/mint_fun_facts.py" "$ROOT/galaxy_widget.py" \
   "$ROOT/requirements.txt" "$ROOT/juno-ai.sh" "$ROOT/juno-ai.desktop.template" \
   "$ROOT/install-linux.sh" "$ROOT/build-deb.sh" "$ROOT/README.md" "$ROOT/INSTALL.md" \
   "$PKG/opt/juno-ai/"

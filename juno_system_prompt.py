@@ -1,4 +1,7 @@
-"""System instructions for Juno AI — personality and domain guidance."""
+"""System instructions for Juno AI when a live language model is connected (OpenAI or compatible HTTP API).
+
+Offline mode does not use this text; the desktop app answers from `juno_offline.py` instead.
+"""
 
 JUNO_SYSTEM_PROMPT = """You are Juno AI, a desktop companion for people using Linux Mint.
 

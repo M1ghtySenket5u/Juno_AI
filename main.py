@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Juno AI — Linux Mint desktop buddy (OpenAI streaming + optional Ollama)."""
+"""Juno AI — Linux Mint desktop buddy (offline knowledge by default; optional cloud or local HTTP)."""
 
 from __future__ import annotations
 
 import random
+import re
 import sys
 from typing import Any
 
@@ -25,12 +26,14 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
     QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
 
 from openai import OpenAI
 
 from config_store import load_config, save_config
 from galaxy_widget import GalaxyBackdrop
+from juno_offline import offline_reply
 from juno_system_prompt import JUNO_SYSTEM_PROMPT
 from mint_fun_facts import random_mint_fact
 
@@ -46,6 +49,45 @@ COLOR_CHAT_BG = "rgba(4, 10, 24, 0.94)"
 COLOR_ERROR = "#FF6B6B"
 
 FAREWELL_MS = 5000
+
+_CODE_FENCE = re.compile(r"```(\w*)\r?\n(.*?)```", re.DOTALL)
+
+
+def _escape_html(s: str) -> str:
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def _offline_plain_segment_to_html(segment: str) -> str:
+    pieces: list[str] = []
+    for part in re.split(r"(\*\*[^*]+\*\*)", segment):
+        if len(part) > 4 and part.startswith("**") and part.endswith("**"):
+            pieces.append("<b>" + _escape_html(part[2:-2]) + "</b>")
+        else:
+            pieces.append(_escape_html(part).replace("\n", "<br>"))
+    return "".join(pieces)
+
+
+def offline_reply_to_html(text: str) -> str:
+    """Turn Juno's offline Markdown-ish text into HTML for QTextBrowser."""
+    html_chunks: list[str] = []
+    pos = 0
+    for m in _CODE_FENCE.finditer(text):
+        html_chunks.append(_offline_plain_segment_to_html(text[pos : m.start()]))
+        code = _escape_html(m.group(2).rstrip("\r\n"))
+        html_chunks.append(
+            "<pre style='margin:8px 0;padding:10px;background:rgba(4,12,28,0.95);"
+            "border:1px solid rgba(126,200,227,0.35);border-radius:8px;"
+            f"white-space:pre-wrap;'>{code}</pre>"
+        )
+        pos = m.end()
+    html_chunks.append(_offline_plain_segment_to_html(text[pos:]))
+    return "".join(html_chunks)
+
 
 # Mission-style sign-offs (includes your two classics, plus a few in the same voice).
 _FAREWELL_LINES: tuple[str, ...] = (
@@ -143,20 +185,31 @@ class SettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Juno AI — Settings")
-        self.setMinimumWidth(480)
+        self.setMinimumWidth(520)
         cfg = load_config()
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
         self.provider = QComboBox()
-        self.provider.addItems(["OpenAI", "Ollama (local)"])
-        prov = (cfg.get("provider") or "openai").lower()
-        self.provider.setCurrentIndex(1 if prov == "ollama" else 0)
+        self.provider.addItems(
+            [
+                "Offline — built-in Linux & Mint lessons",
+                "OpenAI (optional)",
+                "Local HTTP API — OpenAI-compatible /v1 (advanced)",
+            ]
+        )
+        prov = (cfg.get("provider") or "offline").lower()
+        if prov == "openai":
+            self.provider.setCurrentIndex(1)
+        elif prov == "ollama":
+            self.provider.setCurrentIndex(2)
+        else:
+            self.provider.setCurrentIndex(0)
 
         self.api_key = QLineEdit()
         self.api_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.api_key.setPlaceholderText("sk-… (OpenAI only)")
+        self.api_key.setPlaceholderText("sk-… (only if you use OpenAI)")
         self.api_key.setText(cfg.get("api_key", ""))
 
         self.model = QLineEdit()
@@ -168,19 +221,22 @@ class SettingsDialog(QDialog):
         self.ollama_base.setText(cfg.get("ollama_base", "http://127.0.0.1:11434"))
 
         self.ollama_model = QLineEdit()
-        self.ollama_model.setPlaceholderText("llama3.2")
+        self.ollama_model.setPlaceholderText("model name on your local server")
         self.ollama_model.setText(cfg.get("ollama_model", "llama3.2"))
 
-        form.addRow("Provider", self.provider)
+        form.addRow("Response mode", self.provider)
         form.addRow("OpenAI API key", self.api_key)
         form.addRow("OpenAI model", self.model)
-        form.addRow("Ollama base URL", self.ollama_base)
-        form.addRow("Ollama model", self.ollama_model)
+        form.addRow("Local API base URL", self.ollama_base)
+        form.addRow("Local API model id", self.ollama_model)
         layout.addLayout(form)
 
         hint = QLabel(
-            "OpenAI: https://platform.openai.com/api-keys — stored in ~/.config/juno-ai/config.json\n"
-            "Ollama: run `ollama serve` and `ollama pull <model>`; uses the /v1 OpenAI-compatible API."
+            "Juno ships with a full offline curriculum: Linux, Linux Mint, terminal habits, "
+            "common commands, and a from-scratch apple pie checklist. Nothing leaves your machine unless you opt in.\n\n"
+            "OpenAI: add your own key at https://platform.openai.com/api-keys — stored in ~/.config/juno-ai/config.json\n\n"
+            "Local HTTP API: for an OpenAI-compatible Chat Completions server on your machine or LAN. "
+            "The default URL is a common local layout; change it to match your stack."
         )
         hint.setWordWrap(True)
         hint.setStyleSheet(f"color: {COLOR_SUBTITLE}; font-size: 11px;")
@@ -222,13 +278,18 @@ class SettingsDialog(QDialog):
         )
 
     def _save(self) -> None:
-        is_ollama = self.provider.currentIndex() == 1
+        idx = self.provider.currentIndex()
         key = self.api_key.text().strip()
-        if not is_ollama and not key:
-            QMessageBox.warning(self, "Juno AI", "OpenAI mode needs an API key.")
+        if idx == 1 and not key:
+            QMessageBox.warning(self, "Juno AI", "OpenAI mode needs an API key, or pick Offline / local HTTP instead.")
             return
         data = load_config()
-        data["provider"] = "ollama" if is_ollama else "openai"
+        if idx == 0:
+            data["provider"] = "offline"
+        elif idx == 1:
+            data["provider"] = "openai"
+        else:
+            data["provider"] = "ollama"
         data["api_key"] = key
         data["model"] = self.model.text().strip() or "gpt-4o-mini"
         data["ollama_base"] = self.ollama_base.text().strip() or "http://127.0.0.1:11434"
@@ -276,8 +337,8 @@ class MainWindow(QMainWindow):
         sh.addWidget(title)
 
         subtitle = QLabel(
-            "Mission control for Linux Mint — OpenAI or local Ollama. "
-            "Enter sends · Shift+Enter newline."
+            "Mission control for Linux Mint — works offline with built-in lessons; optional OpenAI or "
+            "local OpenAI-compatible API in File → Settings. Enter sends · Shift+Enter newline."
         )
         subtitle.setWordWrap(True)
         subtitle.setStyleSheet(f"color: {COLOR_SUBTITLE}; font-size: 12px;")
@@ -388,7 +449,8 @@ class MainWindow(QMainWindow):
         )
         self._append_html(
             f'<p style="color:{COLOR_ASSISTANT}; margin: 6px 0;">'
-            f"<b>Juno</b> — Systems green. Ask about Mint, or throw me a curveball — I can handle it.</p>"
+            f"<b>Juno</b> — Systems green. Offline library is live: Linux, Mint, terminal drills, commands, "
+            f"or say <b>apple pie</b> for the galley recipe. Optional cloud link lives in Settings if you want it.</p>"
         )
 
     def _append_user_message(self, text: str) -> None:
@@ -400,12 +462,14 @@ class MainWindow(QMainWindow):
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml(user_html)
         self.chat.setTextCursor(cursor)
+        self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
 
     def _append_html(self, html: str) -> None:
         cursor = self.chat.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml(html + "<br>")
         self.chat.setTextCursor(cursor)
+        self.chat.verticalScrollBar().setValue(self.chat.verticalScrollBar().maximum())
 
     def _begin_streaming_assistant(self) -> None:
         cursor = self.chat.textCursor()
@@ -553,31 +617,56 @@ class MainWindow(QMainWindow):
         if not text or self._streaming:
             return
         cfg = load_config()
-        provider = (cfg.get("provider") or "openai").lower()
+        provider = (cfg.get("provider") or "offline").lower()
         api_key = (cfg.get("api_key") or "").strip()
         openai_model = (cfg.get("model") or "gpt-4o-mini").strip()
         ollama_base = (cfg.get("ollama_base") or "http://127.0.0.1:11434").strip()
         ollama_model = (cfg.get("ollama_model") or "llama3.2").strip()
 
-        if provider != "ollama" and not api_key:
-            QMessageBox.warning(
-                self,
-                "Juno AI",
-                "Set your OpenAI API key in File → Settings, or switch to Ollama.",
-            )
-            self._open_settings()
-            return
-
         self.input.clear()
         self._append_user_message(text)
         self._pending_user = text
+        self.send_btn.setEnabled(False)
+
+        if provider == "offline":
+            self.status.setText("Juno — offline library")
+            reply = offline_reply(text)
+            inner = offline_reply_to_html(reply)
+            self._append_html(
+                f'<div style="color:{COLOR_ASSISTANT}; margin: 8px 0;"><b>Juno</b> — {inner}</div>'
+            )
+            self._history.append({"role": "user", "content": text})
+            self._history.append({"role": "assistant", "content": reply})
+            if len(self._history) > 40:
+                self._history = self._history[-40:]
+            self.status.setText("")
+            self.send_btn.setEnabled(True)
+            return
+
+        if provider == "openai" and not api_key:
+            self.status.setText("")
+            reply = offline_reply(text)
+            prefix = (
+                "**Note:** OpenAI is selected but no API key is saved yet—here is the offline briefing instead.\n\n"
+            )
+            full = prefix + reply
+            inner = offline_reply_to_html(full)
+            self._append_html(
+                f'<div style="color:{COLOR_ASSISTANT}; margin: 8px 0;"><b>Juno</b> — {inner}</div>'
+            )
+            self._history.append({"role": "user", "content": text})
+            self._history.append({"role": "assistant", "content": full})
+            if len(self._history) > 40:
+                self._history = self._history[-40:]
+            self.send_btn.setEnabled(True)
+            return
+
         messages: list[dict[str, str]] = [
             {"role": "system", "content": JUNO_SYSTEM_PROMPT},
             *self._history,
             {"role": "user", "content": text},
         ]
 
-        self.send_btn.setEnabled(False)
         self.status.setText("Juno is composing… (streaming)")
         self._begin_streaming_assistant()
 
@@ -616,18 +705,19 @@ class MainWindow(QMainWindow):
             self._end_streaming_assistant()
         self.status.setText("")
         self._append_html(
-            f'<p style="color:{COLOR_ERROR}; margin: 8px 0;"><b>Error</b> — {_escape_html(err)}</p>'
+            f'<p style="color:{COLOR_ERROR}; margin: 8px 0;"><b>Link issue</b> — {_escape_html(err)}</p>'
         )
+        fallback = offline_reply(self._pending_user)
+        inner = offline_reply_to_html(fallback)
+        self._append_html(
+            f'<p style="color:{COLOR_SUBTITLE}; margin: 4px 0;">Falling back to the offline briefing library.</p>'
+            f'<div style="color:{COLOR_ASSISTANT}; margin: 8px 0;"><b>Juno</b> — {inner}</div>'
+        )
+        self._history.append({"role": "user", "content": self._pending_user})
+        self._history.append({"role": "assistant", "content": fallback})
+        if len(self._history) > 40:
+            self._history = self._history[-40:]
         self.send_btn.setEnabled(True)
-
-
-def _escape_html(s: str) -> str:
-    return (
-        s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
 
 
 def main() -> int:
