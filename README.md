@@ -112,6 +112,8 @@ The package installs to `/opt/juno-ai` and runs `postinst` to create the venv an
 |------|---------|
 | `main.py` | Application UI and logic |
 | `juno_offline.py` | Offline facts, Mint notes, commands, terminal primer, apple pie |
+| `juno_environment.py` | Detects missing pieces (Python, venv, imports) and suggests `apt` / install commands |
+| `setup_wizard.py` | Step-by-step setup dialog with copy-to-clipboard terminal blocks |
 | `galaxy_widget.py` | Painted galaxy / starfield background |
 | `mint_fun_facts.py` | Mint trivia for startup rotation |
 | `juno_system_prompt.py` | Persona and safety rules for live models |
@@ -122,6 +124,8 @@ The package installs to `/opt/juno-ai` and runs `postinst` to create the venv an
 | `install-linux.sh` | One-shot local install + menu shortcut |
 | `build-deb.sh` | Builds a simple `.deb` |
 | `INSTALL.md` | Short numbered install steps |
+
+On the **first launch** with a **new** `~/.config/juno-ai/config.json`, Juno opens a short **setup guide** (four steps: health check, install commands, launch command, how to chat). You can reopen it anytime from **Help → Setup guide…**. If your config file predates this feature, the guide stays skipped so you are not interrupted.
 
 ---
 

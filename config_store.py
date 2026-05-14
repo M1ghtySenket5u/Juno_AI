@@ -8,6 +8,7 @@ DEFAULT_CONFIG: dict = {
     "model": "gpt-4o-mini",
     "ollama_base": "http://127.0.0.1:11434",
     "ollama_model": "llama3.2",
+    "setup_guide_done": False,
 }
 
 
@@ -27,8 +28,12 @@ def load_config() -> dict:
     if not path.is_file():
         return merged
     try:
-        disk = json.loads(path.read_text(encoding="utf-8"))
+        raw = path.read_text(encoding="utf-8")
+        disk = json.loads(raw)
         if isinstance(disk, dict):
+            # Older installs had no key — assume they already set Juno up; skip first-run wizard.
+            if "setup_guide_done" not in disk:
+                merged["setup_guide_done"] = True
             merged.update(disk)
     except (json.JSONDecodeError, OSError):
         pass

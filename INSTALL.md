@@ -33,9 +33,13 @@ This creates `.venv`, installs dependencies, and adds **Juno AI** to your applic
 - Open the **menu**, search **Juno AI**, click it, **or**
 - Run `~/juno-ai/juno-ai.sh` from a terminal.
 
-## 5. Optional: Settings
+## 5. First launch — setup guide
 
-**File → Settings…** is only needed if you want **OpenAI** or a **local OpenAI-compatible HTTP API**. Out of the box, Juno runs in **offline** mode with built-in Linux, Mint, terminal, command, and apple pie content.
+The first time Juno runs with a **new** settings file, a **four-step setup window** opens: health check, copy-paste install commands, how to start Juno, and how to chat offline. Reopen it anytime from **Help → Setup guide…** inside the app.
+
+## 6. Optional: Settings
+
+**File → Settings…** is only needed if you want **OpenAI** or a **local OpenAI-compatible HTTP API**. Out of the box, Juno runs in **offline** mode.
 
 ## Optional: `.deb` package
 

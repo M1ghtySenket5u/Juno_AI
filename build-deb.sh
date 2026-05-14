@@ -32,7 +32,8 @@ EOS
 chmod 755 "$PKG/DEBIAN/postinst"
 
 cp -a "$ROOT/main.py" "$ROOT/config_store.py" "$ROOT/juno_system_prompt.py" \
-  "$ROOT/juno_offline.py" "$ROOT/mint_fun_facts.py" "$ROOT/galaxy_widget.py" \
+  "$ROOT/juno_offline.py" "$ROOT/juno_environment.py" "$ROOT/setup_wizard.py" \
+  "$ROOT/mint_fun_facts.py" "$ROOT/galaxy_widget.py" \
   "$ROOT/requirements.txt" "$ROOT/juno-ai.sh" "$ROOT/juno-ai.desktop.template" \
   "$ROOT/install-linux.sh" "$ROOT/build-deb.sh" "$ROOT/README.md" "$ROOT/INSTALL.md" \
   "$PKG/opt/juno-ai/"

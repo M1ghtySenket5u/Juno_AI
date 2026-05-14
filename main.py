@@ -36,6 +36,7 @@ from galaxy_widget import GalaxyBackdrop
 from juno_offline import offline_reply
 from juno_system_prompt import JUNO_SYSTEM_PROMPT
 from mint_fun_facts import random_mint_fact
+from setup_wizard import SetupGuideDialog, should_show_setup_guide
 
 # NASA × samurai × galaxy UI tokens
 COLOR_TITLE = "#F2F6FF"
@@ -379,6 +380,14 @@ class MainWindow(QMainWindow):
         act_quit = QAction("Quit", self)
         act_quit.triggered.connect(self.close)
         file_menu.addAction(act_quit)
+
+        help_menu = menubar.addMenu("Help")
+        act_setup_guide = QAction("Setup guide…", self)
+        act_setup_guide.triggered.connect(self._open_setup_guide)
+        help_menu.addAction(act_setup_guide)
+
+    def _open_setup_guide(self) -> None:
+        SetupGuideDialog(self).exec()
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(
@@ -726,6 +735,12 @@ def main() -> int:
     app.setStyle("Fusion")
     win = MainWindow()
     win.show()
+
+    def _maybe_first_setup() -> None:
+        if should_show_setup_guide():
+            SetupGuideDialog(win).exec()
+
+    QTimer.singleShot(300, _maybe_first_setup)
     return app.exec()
 
 
