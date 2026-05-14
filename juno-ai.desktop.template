@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Juno AI
+Comment=Linux Mint buddy — ChatGPT or local Ollama
+Exec=__INSTALL_DIR__/juno-ai.sh
+Path=__INSTALL_DIR__
+Icon=applications-chat
+Terminal=false
+Type=Application
+Categories=Utility;Education;
+StartupNotify=true
+Keywords=chat;linux;mint;ai;assistant;
